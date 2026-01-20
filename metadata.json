@@ -1,0 +1,7 @@
+{
+  "name": "Munus",
+  "description": "A platform connecting clients with skilled professionals like plumbers, electricians, and gardeners based on proximity, expertise, and verified feedback.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
