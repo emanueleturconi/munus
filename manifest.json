@@ -6,8 +6,6 @@
   "orientation": "any",
   "scope": "/",
   "short_name": "emanueleturconi.github",
-  "start_url": "start_url",
-  "theme_color": "#ffffff",
-  "id": "Munus",
-  "description": "Munus network"
+  "start_url": "/",
+  "theme_color": "#ffffff"
 }
