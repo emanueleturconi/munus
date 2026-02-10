@@ -27,15 +27,33 @@ export enum JobStatus {
   COMPLETED = 'COMPLETED'
 }
 
+export enum SubscriptionPlan {
+  BASE = 'BASE',
+  TRIAL = 'TRIAL',
+  MONTHLY = 'MONTHLY',
+  ANNUAL = 'ANNUAL'
+}
+
+export interface SubscriptionInfo {
+  plan: SubscriptionPlan;
+  expiryDate?: string;
+  isTrialUsed: boolean;
+}
+
 export interface Review {
   id: string;
   clientId: string;
   clientName: string;
   jobDescription: string;
-  rating: number;
-  comment: string;
+  rating: number; 
+  comment: string; 
   date: string;
-  isConfirmed: boolean;
+  isConfirmed: boolean; 
+  proReply?: {
+    comment: string;
+    clientRating: number; 
+    date: string;
+  };
 }
 
 export interface Professional {
@@ -50,7 +68,7 @@ export interface Professional {
     lng: number;
     address: string;
   };
-  workingRadius: number; // in km
+  workingRadius: number; 
   hourlyRate: {
     min: number;
     max: number;
@@ -61,6 +79,7 @@ export interface Professional {
   reviews: Review[];
   cvSummary: string;
   avatar: string;
+  subscription?: SubscriptionInfo;
 }
 
 export interface JobClarification {
@@ -71,8 +90,9 @@ export interface JobClarification {
 export interface JobRequest {
   id: string;
   clientId: string;
-  clientName?: string; // Nome per passaparola
-  clientAvatar?: string; // Avatar per fiducia visiva
+  clientName?: string;
+  clientAvatar?: string;
+  clientRanking?: number;
   description: string;
   category?: Category;
   city?: string;
@@ -87,5 +107,6 @@ export interface JobRequest {
   status: JobStatus;
   createdAt: string;
   hasFeedback?: boolean;
+  serviceReceived?: boolean; 
   clarifications?: JobClarification[];
 }
