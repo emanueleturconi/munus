@@ -1,7 +1,27 @@
 
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, addDoc, onSnapshot, query, where, orderBy } from "firebase/firestore";
+// Use direct named imports for the modular Firebase SDK (v9+).
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged 
+} from "firebase/auth";
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  deleteDoc, 
+  addDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  orderBy 
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAr5Uyxja_hb4Of07J8DU-Xd1yLCDfn7TM",
@@ -13,14 +33,33 @@ const firebaseConfig = {
   measurementId: "G-XPBSYD9WWJ"
 };
 
+// Initialize Firebase app instance
 const app = initializeApp(firebaseConfig);
+
+// Initialize services and export instances
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Configurazione provider Google per forzare la selezione dell'account
+// Configure Google authentication provider
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-export { signInWithPopup, signOut, onAuthStateChanged, collection, doc, setDoc, getDoc, updateDoc, addDoc, onSnapshot, query, where, orderBy };
+// Re-export essential functions to be used throughout the application.
+export { 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  deleteDoc,
+  addDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  orderBy 
+};

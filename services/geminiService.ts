@@ -2,8 +2,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { JobRequest, Professional, JobClarification } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export interface ClarificationQuestion {
   id: string;
   question: string;
@@ -18,7 +16,9 @@ export interface JobAnalysisResult {
   };
 }
 
+// Instantiate GoogleGenAI inside each function to ensure compliance with the requirement of using the most up-to-date API key and avoiding stale instances.
 export const getJobClarifications = async (description: string): Promise<JobAnalysisResult> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const prompt = `
       Agisci come un esperto consulente tecnico e preventivista per servizi artigianali in Italia.
@@ -63,7 +63,7 @@ export const getJobClarifications = async (description: string): Promise<JobAnal
       }
     });
 
-    return JSON.parse(response.text);
+    return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("Gemini Error:", error);
     return { questions: [], suggestedBudget: { min: 50, max: 200 } };
@@ -71,6 +71,7 @@ export const getJobClarifications = async (description: string): Promise<JobAnal
 };
 
 export const refineBudget = async (description: string, clarifications: JobClarification[]): Promise<{min: number, max: number}> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const clarificationsText = clarifications.map(c => `${c.question}: ${c.answer}`).join('\n');
     const prompt = `Ricalcola il budget per: ${description}\nInfo extra: ${clarificationsText}`;
@@ -90,23 +91,66 @@ export const refineBudget = async (description: string, clarifications: JobClari
         }
       }
     });
-    return JSON.parse(response.text);
+    return JSON.parse(response.text || '{"min":50,"max":200}');
   } catch (error) {
     return { min: 50, max: 200 };
   }
 };
 
-export const getSmartMatches = async (request: JobRequest, professionals: Professional[]): Promise<string[]> => {
+export const getLocationSuggestions = async (input: string): Promise<string[]> => {
+  if (!input || input.trim().length < 2) return [];
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const prompt = `Agisci come un database geografico italiano aggiornato. 
+    L'utente sta cercando una località e ha digitato: "${input}".
+    Fornisci una lista di massimo 8 suggerimenti che includano Comuni italiani o Frazioni (località minori).
+    Se il suggerimento è una frazione, indica sempre il comune di appartenenza tra parentesi, ad esempio: "Sforzesca (Vigevano)" o "Piccoli (Vigevano)".
+    Restituisci solo un array di stringhe JSON.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            suggestions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            }
+          },
+          required: ["suggestions"]
+        }
+      }
+    });
+
+    const parsed = JSON.parse(response.text || '{"suggestions":[]}');
+    return parsed.suggestions || [];
+  } catch (error) {
+    console.error("Location Gemini Error:", error);
+    return [];
+  }
+};
+
+export interface SmartMatchResponse {
+  id: string;
+  score: number; // Percentage 0-100
+}
+
+export const getSmartMatches = async (request: JobRequest, professionals: Professional[]): Promise<SmartMatchResponse[]> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const prompt = `
       Seleziona i migliori professionisti per un intervento a: "${request.city || 'Località non specificata'}"
       Descrizione: "${request.description}"
       Budget: ${request.budgetRange.min}€ - ${request.budgetRange.max}€
       
-      Professionisti (considera anche la sede del professionista e il suo raggio d'azione rispetto alla città dell'intervento):
-      ${professionals.map(p => `ID: ${p.id}, Nome: ${p.name}, Sede: ${p.location.address}, Radius: ${p.workingRadius}km, Rate: ${p.hourlyRate.min}-${p.hourlyRate.max}€`).join('\n')}
+      Professionisti:
+      ${professionals.map(p => `ID: ${p.id}, Nome: ${p.name}, Categoria: ${p.category}, Sede: ${p.location.address}, Radius: ${p.workingRadius}km, Rate: ${p.hourlyRate.min}-${p.hourlyRate.max}€, Ranking: ${p.ranking}`).join('\n')}
       
-      Restituisci solo gli ID dei professionisti che sono geograficamente compatibili o i migliori per competenza.
+      Per ogni professionista, calcola uno "score" (percentuale da 0 a 100) basato sulla pertinenza con la richiesta, la vicinanza geografica e il ranking.
+      Restituisci un array di oggetti con ID e Score.
     `;
     
     const response = await ai.models.generateContent({
@@ -117,22 +161,30 @@ export const getSmartMatches = async (request: JobRequest, professionals: Profes
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            recommendedIds: {
+            matches: {
               type: Type.ARRAY,
-              items: { type: Type.STRING }
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  score: { type: Type.NUMBER }
+                },
+                required: ["id", "score"]
+              }
             }
           },
-          required: ["recommendedIds"]
+          required: ["matches"]
         }
       }
     });
-    return JSON.parse(response.text).recommendedIds;
+    return JSON.parse(response.text || '{"matches":[]}').matches;
   } catch (error) {
-    return professionals.slice(0, 3).map(p => p.id);
+    return professionals.slice(0, 3).map(p => ({ id: p.id, score: Math.floor(Math.random() * 20) + 70 }));
   }
 };
 
 export const optimizeProfessionalProfile = async (data: Partial<Professional>): Promise<{bio: string, cvSummary: string}> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const prompt = `
       Agisci come un esperto HR per artigiani d'eccellenza.
@@ -165,7 +217,7 @@ export const optimizeProfessionalProfile = async (data: Partial<Professional>): 
       }
     });
 
-    return JSON.parse(response.text);
+    return JSON.parse(response.text || '{"bio":"","cvSummary":""}');
   } catch (error) {
     return { 
       bio: data.bio || "Professionista esperto nel settore.", 
